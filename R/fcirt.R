@@ -1,6 +1,6 @@
 #' @title forced choice model estimation
 #' @description This function implements full Bayesian estimation of forced choice models using rstan
-#' @param fcirt.Data Response data in wide format
+#' @param fcirt.Data Response data in wide format. If the first statement is preferred, the data should be coded as 1, otherwise it should be coded as 2.
 #' @param pairmap A two-column data matrix: the first column is the statement number for statement s; the second column is the statement number for statement t.
 #' @param ind A column vector mapping each statement to each trait. For example, c(1, 1, 1, 2, 2, 2) means that the first 3 statements belong to trait 1 and the last 3 statements belong to trait 2.
 #' @param ParInits A three-column matrix containing initial values for the three statement parameters. If using the direct MUPP estimation approach, 1 and -1 for alphas and taus are recommended and -1 or 1 for deltas are recommended depending on the signs of the statements. If using the two-step estimation approach, pre-estimated statement parameters are used as the initial values. The R package bmggum can be used to estimate statement parameters for the two-step approach. See documentation for bmggum for more details.
@@ -21,14 +21,17 @@
 #' @param vt Standard deviation of the prior distribution for taus. The default value is 2.
 #' @return Result object that stores information including the (1) stanfit object, (2) estimated item parameters, (3) estimated person parameters, (4) response data, and (5) the input column vector mapping each statement to each trait.
 #' @examples
-#' Data <- c(1)
-#' Data <- matrix(Data,nrow = 1)
-#' pairmap <- c(1,2)
-#' pairmap <- matrix(pairmap,nrow = 1)
-#' ind <- c(1,2)
-#' ParInits <- c(1, 1, 1, -1, -1, -1)
+#' \donttest{
+#' # long running time
+#' Data <- c(1,2,2,1,1,1,1,1,NA,1,2,1,1,2,1,1,2,2,NA,2,2,2,1,1,1,2,1,1,1,1,2,1,1,1,2,1,1,2,1,1)
+#' Data <- matrix(Data,nrow = 10)
+#' pairmap <- c(1,3,5,7,2,4,6,8)
+#' pairmap <- matrix(pairmap,ncol = 2)
+#' ind <- c(1,2,1,2,1,2,2,1)
+#' ParInits <- c(1, 1, 1, 1, 1, 1, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1)
 #' ParInits <- matrix(ParInits, ncol = 3)
-#' mod <- fcirt(fcirt.Data=Data,pairmap=pairmap,ind=ind,ParInits=ParInits,iter=3,warmup=1,chains=1)
+#' mod <- fcirt(fcirt.Data=Data,pairmap=pairmap,ind=ind,
+#' ParInits=ParInits,iter=1000,warmup=500,chains=2)}
 #' @export
 fcirt <- function(fcirt.Data, pairmap, ind, ParInits, model="MUPP", covariate=NULL, iter=3000, chains=3,
                    warmup=floor(iter/2), adapt_delta=0.90, max_treedepth=15, thin=1, cores=2,
@@ -41,25 +44,45 @@ fcirt <- function(fcirt.Data, pairmap, ind, ParInits, model="MUPP", covariate=NU
 
     if (is.null(covariate)){
 
+      N1 <- nrow(fcirt.Data)
+
+      Missing <- matrix(NA,nrow=(ncol(fcirt.Data))*N1,ncol=1)
+      MissPattern<-data.frame(Missing=((as.numeric(is.na(t(fcirt.Data)))*-1)+1),ID=seq(1,((ncol(fcirt.Data))*N1),1))
+      Miss<-subset(MissPattern,Missing==0)
+      if (nrow(Miss)==0){
+        ind<-rep(ind,N1)
+      }else{
+        ind<-rep(ind,N1)[-c(Miss$ID*2-1, Miss$ID*2)]
+      }
+
+      Data<-suppressWarnings(edstan::irt_data(response_matrix =fcirt.Data))
       #sample size
-      I <- nrow(fcirt.Data)
+      I2<-dim(fcirt.Data)[1]
       #number of pairs
-      J <- nrow(pairmap)
-      S <- J*2
+      J2<-dim(fcirt.Data)[2]
+      #S <- J2*2
+      S <- max(pairmap)
       D <- max(ind)
 
       #initial values
       init_fun <- function() {
-        list(alpha=ParInits[,1], delta=ParInits[,2], tau=ParInits[,3], theta=matrix(0,nrow=I,ncol=D))
+        list(alpha=ParInits[,1], delta=ParInits[,2], tau=ParInits[,3], theta=matrix(0,nrow=I2,ncol=D))
       }
 
-      data_list<-list(n_student = I, n_item=S, n_pair=J, n_dimension=D, p=pairmap, d=ind, res=fcirt.Data,
-        ma=ma,
-        va=va,
-        md=md,
-        vd=vd,
-        mt=mt,
-        vt=vt)
+      data_list<-list(n_student = I2, n_item=S, n_pair=J2, n_dimension=D, ind=ind, p=pairmap,
+                      ma=ma,
+                      va=va,
+                      md=md,
+                      vd=vd,
+                      mt=mt,
+                      vt=vt,
+                      N=Data$N,
+                      II=Data$ii,
+                      JJ=Data$jj,
+                      y=Data$y,
+                      theta_mu=as.array(c(rep(0,D))),
+                      I1=Data$I,
+                      J1=Data$J)
 
       ##################################################
       #       Input response data estimation        #
@@ -77,14 +100,14 @@ fcirt <- function(fcirt.Data, pairmap, ind, ParInits, model="MUPP", covariate=NU
       Alpha_ES<-rstan::summary(fcirt, pars = c("alpha"), probs = c(0.025,0.5,0.975))$summary
       Delta_ES<-rstan::summary(fcirt, pars = c("delta"), probs = c(0.025, 0.5,0.975))$summary
       Tau_ES<-rstan::summary(fcirt, pars = c("tau"), probs = c(0.025, 0.5,0.975))$summary
-      #Cor_ES<-rstan::summary(fcirt, pars = c("Cor"), probs = c(0.025, 0.5,0.975))$summary
+      Cor_ES<-rstan::summary(fcirt, pars = c("Cor"), probs = c(0.025, 0.5,0.975))$summary
 
       #####save estimated parameters to an R object
       fcirt.summary<-list(Theta.est=THETA,
                           Alpha.est=Alpha_ES,
                           Delta.est=Delta_ES,
                           Tau.est=Tau_ES,
-                          #Cor.est=Cor_ES,
+                          Cor.est=Cor_ES,
                           Data=fcirt.Data,
                           Fit=fcirt,
                           Dimension=dimension,
@@ -96,3 +119,4 @@ fcirt <- function(fcirt.Data, pairmap, ind, ParInits, model="MUPP", covariate=NU
   class(fcirt.summary) <- "fcirt"
   return(fcirt.summary)
 }
+

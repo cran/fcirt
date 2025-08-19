@@ -4,17 +4,40 @@
 # fcirt
 
 <!-- badges: start -->
+
+[![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/fcirt)](https://cran.r-project.org/package=fcirt)
+[![Total
+Downloads](https://cranlogs.r-pkg.org/badges/grand-total/fcirt)](https://cranlogs.r-pkg.org/badges/grand-total/fcirt "Total downloads")
 <!-- badges: end -->
 
 The goal of fcirt is to estimate forced choice models using Bayesian
 method. Specifically, the Multi-Unidimensional Pairwise Preference
 (MUPP) model is estimated using the R package **rstan** that utilizes
-the Hamiltonian Monte Carlo sampling algorithm. Four functions (i.e.,
-fcirt( ), extract( ), information( ), and bayesplot( )) are provided for
-model estimation, results extraction, item and test information
-computation, and Bayesian diagnostic plottings, respectively.
+the Hamiltonian Monte Carlo sampling algorithm. Below are some important
+features of the fcirt package:
+
+1.  Item and test information calculated using either quadrature points
+    or estimated person parameters can be obtained using the function
+    information( ).
+2.  Missing data are automatically dealt with in a way similar to how
+    full information maximum likelihood handles missing data.
+3.  Dimensions are allowed to correlate and the correlations are
+    estimated.
+4.  Statements are allowed to appear multiple times in different items
+    by specifying the required pairmap argument in the function
+    fcirt().  
+5.  Four functions (i.e., fcirt( ), extract( ), information( ), and
+    bayesplot( )) are provided for model estimation, results extraction,
+    item and test information computation, and Bayesian diagnostic
+    plottings, respectively.
 
 ## Installation
+
+You can install fcirt from CRAN:
+
+``` r
+install.packages("fcirt")
+```
 
 You can install the development version of fcirt from GitHub:
 
@@ -32,21 +55,21 @@ library(fcirt)
 
 ## basic example code
 ## Step 1: Input data
-# 1.1 Response data in wide format
-fcirt.Data <- c(1,0,0,1,1,1,1,1,1,1,0,1,1,0,1,1,0,0,0,0,0,0,1,1,1,0,1,1,1,1,0,1,1,1,0,1,1,0,1,1)
+# 1.1 Response data in wide format. If the first statement is preferred, the data should be coded as 1, otherwise it should be coded as 2. 
+fcirt.Data <- c(1,2,2,1,1,1,1,1,NA,1,2,1,1,2,1,1,2,2,NA,2,2,2,1,1,1,2,1,1,1,1,2,1,1,1,2,1,1,2,1,1)
 fcirt.Data <- matrix(fcirt.Data,nrow = 10)
 fcirt.Data
 #>       [,1] [,2] [,3] [,4]
-#>  [1,]    1    0    0    0
-#>  [2,]    0    1    0    1
-#>  [3,]    0    1    1    1
-#>  [4,]    1    0    1    1
-#>  [5,]    1    1    1    0
-#>  [6,]    1    1    0    1
-#>  [7,]    1    0    1    1
-#>  [8,]    1    0    1    0
-#>  [9,]    1    0    1    1
-#> [10,]    1    0    1    1
+#>  [1,]    1    2    2    2
+#>  [2,]    2    1    2    1
+#>  [3,]    2    1    1    1
+#>  [4,]    1    2    1    1
+#>  [5,]    1    1    1    2
+#>  [6,]    1    1    2    1
+#>  [7,]    1    2    1    1
+#>  [8,]    1    2    1    2
+#>  [9,]   NA   NA    1    1
+#> [10,]    1    2    1    1
 
 # 1.2 A two-column data matrix: the first column is the statement number for statement s; the second column is the statement number for statement t.
 pairmap <- c(1,3,5,7,2,4,6,8)
@@ -88,25 +111,27 @@ theta <- matrix(theta, nrow=2)
 theta <- t(theta)
 # theta estimates in p*trait matrix format
 theta
-#>               [,1]        [,2]
-#>  [1,] -0.023326651 -0.03055898
-#>  [2,]  0.023196544  0.02679090
-#>  [3,] -0.014954009  0.03139395
-#>  [4,] -0.017056012 -0.01386742
-#>  [5,] -0.008155243 -0.03766694
-#>  [6,]  0.058712369 -0.01697841
-#>  [7,] -0.022276577  0.00689250
-#>  [8,]  0.036137392  0.03138213
-#>  [9,]  0.006967824 -0.01321674
-#> [10,] -0.023923473  0.01056224
+#>               [,1]         [,2]
+#>  [1,] -0.008846518 -0.020839511
+#>  [2,] -0.010909129  0.014170047
+#>  [3,]  0.039271194 -0.029510418
+#>  [4,]  0.053650150 -0.003515530
+#>  [5,] -0.014835090 -0.038893088
+#>  [6,] -0.029746453  0.003989843
+#>  [7,]  0.046490462  0.007792688
+#>  [8,]  0.027869493 -0.032391257
+#>  [9,]  0.027951501 -0.011935207
+#> [10,]  0.062773955 -0.012719476
 # 3.2 Extract the tau estimates
 tau <- extract(x=mod, pars='tau')
 tau <- tau[,1]
 tau
 #>     tau[1]     tau[2]     tau[3]     tau[4]     tau[5]     tau[6]     tau[7] 
-#> -2.0767845 -0.9670536 -1.2123404 -1.5029586 -1.7202191 -1.0379493 -1.7797779 
+#> -2.0540455 -0.9805878 -1.2825280 -1.4354192 -1.7621815 -1.0457171 -1.8182223 
 #>     tau[8] 
-#> -1.0244982
+#> -1.0445483
+#3.3 Extract the estimates of the correlations among dimensions
+cor <- extract(x=mod, pars='cor')
 
 ## Step 4: Plottings
 # 4.1 Obtain the density plots for alpha
@@ -127,9 +152,9 @@ bayesplot(x=mod, pars='alpha', plot='trace', inc_warmup=FALSE)
 # 5.1 Obtain item information for item 1-3
 OII <- information(x=mod, approach="direct", information="item", items=1:3)
 OII
-#> [1] 0.3935772 0.4049316 0.4042282
+#> [1] 0.3915412 0.4035285 0.3920269
 # 5.2 Obtain test information 
 OTI <- information(x=mod, approach="direct", information="test")
 OTI
-#> [1] 1.608332
+#> [1] 1.577941
 ```

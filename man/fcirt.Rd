@@ -27,7 +27,7 @@ fcirt(
 )
 }
 \arguments{
-\item{fcirt.Data}{Response data in wide format}
+\item{fcirt.Data}{Response data in wide format. If the first statement is preferred, the data should be coded as 1, otherwise it should be coded as 2.}
 
 \item{pairmap}{A two-column data matrix: the first column is the statement number for statement s; the second column is the statement number for statement t.}
 
@@ -72,12 +72,15 @@ Result object that stores information including the (1) stanfit object, (2) esti
 This function implements full Bayesian estimation of forced choice models using rstan
 }
 \examples{
-Data <- c(1)
-Data <- matrix(Data,nrow = 1)
-pairmap <- c(1,2)
-pairmap <- matrix(pairmap,nrow = 1)
-ind <- c(1,2)
-ParInits <- c(1, 1, 1, -1, -1, -1)
+\donttest{
+# long running time
+Data <- c(1,2,2,1,1,1,1,1,NA,1,2,1,1,2,1,1,2,2,NA,2,2,2,1,1,1,2,1,1,1,1,2,1,1,1,2,1,1,2,1,1)
+Data <- matrix(Data,nrow = 10)
+pairmap <- c(1,3,5,7,2,4,6,8)
+pairmap <- matrix(pairmap,ncol = 2)
+ind <- c(1,2,1,2,1,2,2,1)
+ParInits <- c(1, 1, 1, 1, 1, 1, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1)
 ParInits <- matrix(ParInits, ncol = 3)
-mod <- fcirt(fcirt.Data=Data,pairmap=pairmap,ind=ind,ParInits=ParInits,iter=3,warmup=1,chains=1)
+mod <- fcirt(fcirt.Data=Data,pairmap=pairmap,ind=ind,
+ParInits=ParInits,iter=1000,warmup=500,chains=2)}
 }

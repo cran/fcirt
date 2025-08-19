@@ -18,13 +18,16 @@ Selected results output
 This function extracts estimation results.
 }
 \examples{
-Data <- c(1)
-Data <- matrix(Data,nrow = 1)
-pairmap <- c(1,2)
-pairmap <- matrix(pairmap,nrow = 1)
-ind <- c(1,2)
-ParInits <- c(1, 1, 1, -1, -1, -1)
+\donttest{
+# long running time
+Data <- c(1,2,2,1,1,1,1,1,NA,1,2,1,1,2,1,1,2,2,NA,2,2,2,1,1,1,2,1,1,1,1,2,1,1,1,2,1,1,2,1,1)
+Data <- matrix(Data,nrow = 10)
+pairmap <- c(1,3,5,7,2,4,6,8)
+pairmap <- matrix(pairmap,ncol = 2)
+ind <- c(1,2,1,2,1,2,2,1)
+ParInits <- c(1, 1, 1, 1, 1, 1, 1, 1, 1, -1, 1, 1, 1, -1, 1, 1, -1, -1, -1, -1, -1, -1, -1, -1)
 ParInits <- matrix(ParInits, ncol = 3)
-mod <- fcirt(fcirt.Data=Data,pairmap=pairmap,ind=ind,ParInits=ParInits,iter=3,warmup=1,chains=1)
-alpha <- extract(mod, 'alpha')
+mod <- fcirt(fcirt.Data=Data,pairmap=pairmap,ind=ind,
+ParInits=ParInits,iter=1000,warmup=500,chains=2)
+alpha <- extract(mod, 'alpha')}
 }
